@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+    environment {
+        IMAGE_NAME = "taljono/hasher"
+        IMAGE_TAG = "1.0"
+        REGISTRY = "docker.io"
+        K8S_CONFIG_DIR = "C:/Users/taljo/PycharmProjects/pythonProject/k8s"
+    }
+    stages {
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} .
+                """
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                sh """
+                docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                """
+            }
+        }
+        stage('Apply Kubernetes Configurations') {
+            steps {
+                sh """
+                kubectl apply -f ${K8S_CONFIG_DIR}/configMap.yaml
+                kubectl apply -f ${K8S_CONFIG_DIR}/cronjob.yaml
+                """
+            }
+        }
+        stage('Clean Up Old Pods') {
+            steps {
+                sh """
+                kubectl delete pods --field-selector=status.phase=Succeeded
+                """
+            }
+        }
+    }
+}
